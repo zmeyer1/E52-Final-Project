@@ -8,7 +8,7 @@ def findNextPixel(x,y,data,h,w):
         for y_o in [0,-1,-2,1,2]:
             idx = x+x_o
             idy = y+y_o
-            if(idx < 0 || idy < 0 || idx >= h || idy >= w):
+            if(idx < 0 or idy < 0 or idx >= h or idy >= w):
                 continue
             if (data[idx,idy] < 30):
                 return idx,idy
@@ -63,10 +63,10 @@ def main():
                 #get out of the danger zone
                 program.append(sg.motion(mtype='linear', feedrate=800, z = 15))
 
-    for i in range(w):
-        for j in range(h):
-            if(data[i,j] < 255):
-                print("\t\tYa Missed one:",i,j,data[i,j],"\n")
+    # for i in range(w):
+    #     for j in range(h):
+    #         if(data[i,j] < 255):
+    #             print("\t\tYa Missed one:",i,j,data[i,j],"\n")
 
     # cv2.imshow('Final Image',data)
     # cv2.waitKey()
