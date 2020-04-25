@@ -3,11 +3,15 @@ import numpy as np
 import cv2
 import simple_gcode as sg
 
-def findNextPixel(x,y,data):
-    for x_o in [-1,0,1]:
-        for y_o in [-1,0,1]:
-            if (data[x+x_o,y+y_o] == 0):
-                return x+x_o,y+y_o
+def findNextPixel(x,y,data,h,w):
+    for x_o in [0,-1,-2,1,2]:
+        for y_o in [0,-1,-2,1,2]:
+            idx = x+x_o
+            idy = y+y_o
+            if(idx < 0 || idy < 0 || idx >= h || idy >= w):
+                continue
+            if (data[idx,idy] < 30):
+                return idx,idy
     return -1,-1
 
 def main():
@@ -29,10 +33,6 @@ def main():
 
     print("Shape:",data.shape)
 
-    x0 = 0
-    y0 = 0
-
-
 
     program = [
         sg.PREAMBLE,
@@ -43,7 +43,7 @@ def main():
 
     for i in range(w):
         for j in range(h):
-            if(data[i,j] == 0):
+            if(data[i,j] < 30):
                 #found one!
                 print("found one!", i,j)
                 x,y = i,j
@@ -53,11 +53,10 @@ def main():
                 while True:
                     data[x,y] = 255
                     print("Just removed:",x,y,data[x,y])
-                    x_prime, y_prime = findNextPixel(x,y,data)
+                    x_prime, y_prime = findNextPixel(x,y,data,h,w)
                     print("Next pixel to cut to is: ", x_prime,y_prime)
                     if(x_prime == -1):
                         break
-
                     #draw line from x,y to x_prime,y_prime
                     program.append(sg.motion(mtype='linear', feedrate=800, x = x_prime, y = y_prime))
                     x,y = x_prime,y_prime
@@ -66,8 +65,13 @@ def main():
 
     for i in range(w):
         for j in range(h):
-            if(data[i,j] == 0):
-                print("\t\tYa Missed one:",i,j,"\n")
+            if(data[i,j] < 255):
+                print("\t\tYa Missed one:",i,j,data[i,j],"\n")
+
+    # cv2.imshow('Final Image',data)
+    # cv2.waitKey()
+    #print(np.where(data<255))
+
 
     end = [
     '',
