@@ -6,8 +6,8 @@ import simple_gcode as sg
 THRESH = 200
 
 def findNextPixel(x,y,data,h,w):
-    for x_o in [0,-1,-2,1,2]:
-        for y_o in [0,-1,-2,1,2]:
+    for x_o in [0,-1,-2,-3,1,2,3]:
+        for y_o in [0,-1,-2,-3,1,2,3]:
             idx = x+x_o
             idy = y+y_o
             if(idx < 0 or idy < 0 or idx >= h or idy >= w):
@@ -28,7 +28,9 @@ def main():
         sys.exit(1)
 
     data = cv2.imread(filename,cv2.IMREAD_GRAYSCALE)
-    data = cv2.resize(data,(width_out,height_out))
+
+    if(height_out != -1 and width_out != -1):
+        data = cv2.resize(data,(width_out,height_out))
 
     cv2.imshow("Engraving",data)
     cv2.waitKey()
@@ -39,7 +41,41 @@ def main():
 
     print("Shape:",data.shape)
 
-    #print(np.where(data<100))
+    #Need to skeletonize: Algorithm found here https://medium.com/analytics-vidhya/skeletonization-in-python-using-opencv-b7fa16867331
+    _, img = cv2.threshold(data,100,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
+    cv2.imshow("Thresholded",img)
+    cv2.waitKey()
+
+    img = 255-img
+    element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
+    skel = np.zeros(img.shape, np.uint8)
+    while True:
+        #Step 1: Open the image
+        opened = cv2.morphologyEx(img, cv2.MORPH_OPEN, element)
+        #Step 2: Substract open from the original image
+        temp = cv2.subtract(img, opened)
+        #Step 3: Erode the original image and refine the skeleton
+        eroded = cv2.erode(img, element)
+        skel = cv2.bitwise_or(skel,temp)
+        img = eroded.copy()
+        # Step 4: If there are no white pixels left ie.. the image has been completely eroded, quit the loop
+        if cv2.countNonZero(img)==0:
+            break
+
+    cv2.imshow("skeleton",skel)
+    cv2.waitKey()
+
+    valid = False
+    while not valid:
+        user = input("\n\tChoose Skeleton or Original: ")
+        if user.lower() == "skeleton" or user.lower() == "skel":
+            data = 255 - skel
+            valid = True
+        elif user.lower() == "original" or user.lower() == "orig":
+            valid = True
+
+
 
 
     program = [
@@ -53,7 +89,7 @@ def main():
         for j in range(h):
             if(data[i,j] < THRESH):
                 #found one!
-                print("found one!", i,j)
+                #print("found one!", i,j)
                 x,y = i,j
                 #start engraving
                 program.append(sg.motion(mtype='rapid', x=x, y=y))
